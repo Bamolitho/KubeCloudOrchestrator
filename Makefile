@@ -189,7 +189,7 @@ restart-docker:
 tree:
 	@echo "Project Structure:"
 	@echo "=================="
-	@tree -I '__pycache__|*.pyc|outputs' -L 4 2>/dev/null || \
+	@tree -I '__pycache__|*.pyc|outputs' -L 10 2>/dev/null || \
 	(ls -R | grep ":$$" | sed -e 's/:$$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/')
 
 # ==============================
