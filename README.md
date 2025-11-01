@@ -22,7 +22,7 @@ Projet démontrant l’orchestration d’applications multi-conteneurs avec Kube
 
 
 
-## **Étude de cas : Déploiement d’une application Flask avec Kubernetes **[[1]](#ref1)
+## **Étude de cas : Déploiement d’une application Flask avec Kubernetes** [[1]](#ref1)
 
 ### Description de l’application (exemple Flask)
 
