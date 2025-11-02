@@ -22,7 +22,9 @@ Kubernetes est au conteneur ce qu’un système d’exploitation est à un ordin
 ## Composantes principales
 
 - Master Node (API Server, Controller Manager, Scheduler, etc.)
-- Worker Nodes (Kubelet, Kube Proxy, Pod, Container Runtime)
+- Worker Nodes (Kubelet, Kube Proxy, Pod, Container Runtime(ex. Docker))
+
+
 
 ## Fonctionnement global et communication interne
 
@@ -33,81 +35,41 @@ Un **cluster Kubernetes** est composé de :
 - **1 Master Node** (ou plusieurs pour la haute disponibilité)
 - **Plusieurs Worker Nodes**
 
-### **2. Master Node — le cerveau du cluster**
+
+
+### **2. Master Node, le cerveau du cluster**
 
 C’est le **centre de contrôle** du cluster. Il gère **où et quand** exécuter les conteneurs, et surveille leur état.
 
-#### **a. API Server**
+| **a. API Server**                                            | **b. Scheduler**                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| - C’est **l’interface centrale** entre les utilisateurs et le cluster. <br />- Tous les composants (kubectl, nodes, etc.) communiquent via cette API REST. <br />- Chaque commande kubectl (ex. kubectl get pods) passe par elle. | - Décide **sur quel nœud** chaque Pod doit être exécuté. <br />- Il se base sur :  les ressources disponibles (CPU, RAM), les contraintes de l’application (affinités, labels, etc.). |
+| **Rôle :** point d’entrée unique pour gérer le cluster.      | **Rôle :** placement intelligent des Pods dans le cluster.   |
+|                                                              |                                                              |
+| **c. Controller Manager**                                    | **d. etcd**                                                  |
+| - Surveille en permanence l’état du cluster. <br />- Compare **l’état désiré** (défini par les fichiers YAML) avec **l’état actuel**. <br />- Si un Pod crash, il le redéploie automatiquement. | - Base de données clé-valeur distribuée (type NoSQL).  <br />- Contient **toute la configuration du cluster** (état des Pods, des Services, des Secrets, etc.). |
+| **Rôle :** maintenir le cluster conforme à la configuration voulue. | **Rôle :** stockage central de l’état global du cluster.     |
+|                                                              |                                                              |
+| **e. Authentication & Authorization**                        |                                                              |
+| - Gère les identités et permissions (RBAC, comptes de service…).<br />- Contrôle **qui peut faire quoi** dans le cluster. |                                                              |
+| **Rôle :** sécurité et contrôle d’accès.                     |                                                              |
 
-- C’est **l’interface centrale** entre les utilisateurs et le cluster.
-- Tous les composants (kubectl, nodes, etc.) communiquent via cette API REST.
-- Chaque commande kubectl (ex. kubectl get pods) passe par elle.
 
-**Rôle :** point d’entrée unique pour gérer le cluster.
 
-#### **b. Scheduler**
-
-- Décide **sur quel nœud** chaque Pod doit être exécuté.
-- Il se base sur :
-  - les ressources disponibles (CPU, RAM),
-  - les contraintes de l’application (affinités, labels, etc.).
-
-**Rôle :** placement intelligent des Pods dans le cluster.
-
-#### **c. Controller Manager**
-
-- Surveille en permanence l’état du cluster.
-- Compare **l’état désiré** (défini par les fichiers YAML) avec **l’état actuel**.
-- Si un Pod crash, il le redéploie automatiquement.
-
-**Rôle :** maintenir le cluster conforme à la configuration voulue.
-
-#### **d. etcd**
-
-- Base de données clé-valeur distribuée (type NoSQL).
-- Contient **toute la configuration du cluster** (état des Pods, des Services, des Secrets, etc.).
-
-**Rôle :** stockage central de l’état global du cluster.
-
-#### **e. Authentication & Authorization**
-
-- Gère les identités et permissions (RBAC, comptes de service…).
-- Contrôle **qui peut faire quoi** dans le cluster.
-
-**Rôle :** sécurité et contrôle d’accès.
-
-### **3. Worker Nodes — les muscles du cluster**
+### **3. Worker Nodes, les muscles du cluster**
 
 Chaque Node (machine) exécute **les conteneurs réels**. Le Master leur dit quoi faire.
 
-#### **a. Kubelet**
+| **a. Kubelet**                                               | **b. Proxy (kube-proxy)**                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| - Agent qui communique avec le Master. <br />- Reçoit les instructions du Scheduler (exécuter un Pod). <br />- Surveille la santé des conteneurs sur le node. | Gère le **trafic réseau** entrant et sortant des Pods. Met en place le **load balancing** interne et les **règles d’accès**. |
+| **Rôle :** faire exécuter les Pods et rapporter leur état.   | **Rôle :** assurer la communication entre Pods et entre l’extérieur et le cluster. |
+|                                                              |                                                              |
+| **c. Docker (ou autre runtime comme containerd, CRI-O)**     | **d. Pods**                                                  |
+| - Exécute les **conteneurs** eux-mêmes. <br />- Kubernetes n’exécute pas directement les conteneurs, il délègue à Docker/containerd. | - Unité de base d’exécution dans Kubernetes. <br />- Contient un ou plusieurs conteneurs qui partagent le même espace réseau et stockage. |
+| **Rôle :** moteur d’exécution des conteneurs.                | **Rôle :** encapsule les conteneurs pour leur fournir un environnement cohérent. |
 
-- Agent qui communique avec le Master.
-- Reçoit les instructions du Scheduler (exécuter un Pod).
-- Surveille la santé des conteneurs sur le node.
 
-**Rôle :** faire exécuter les Pods et rapporter leur état.
-
-#### **b. Proxy (kube-proxy)**
-
-- Gère le **trafic réseau** entrant et sortant des Pods.
-- Met en place le **load balancing** interne et les **règles d’accès**.
-
-**Rôle :** assurer la communication entre Pods et entre l’extérieur et le cluster.
-
-#### **c. Docker (ou autre runtime comme containerd, CRI-O)**
-
-- Exécute les **conteneurs** eux-mêmes.
-- Kubernetes n’exécute pas directement les conteneurs — il délègue à Docker/containerd.
-
-**Rôle :** moteur d’exécution des conteneurs.
-
-#### **d. Pods**
-
-- **Unité de base d’exécution** dans Kubernetes.
-- Contient un ou plusieurs conteneurs qui partagent le même espace réseau et stockage.
-
-**Rôle :** encapsule les conteneurs pour leur fournir un environnement cohérent.
 
 ### **4. Communication et workflow**
 
@@ -119,23 +81,28 @@ Chaque Node (machine) exécute **les conteneurs réels**. Le Master leur dit quo
 6. Le **kube-proxy** s’assure que le trafic réseau fonctionne correctement.
 7. Le **Controller Manager** vérifie que le Pod tourne bien.
 
+
+
 ### **5. Internet et Services**
 
 Le schéma montre aussi une connexion avec Internet. Les Pods ne sont **pas directement exposés au monde extérieur**. Kubernetes utilise des **Services** (LoadBalancer, NodePort, Ingress) pour exposer les applications.
 
 ### **En résumé :**
 
-| **Élément**            | **Rôle**                                |
-| ---------------------- | --------------------------------------- |
-| **API Server**         | Point central de communication          |
-| **Scheduler**          | Choisit où exécuter les Pods            |
-| **Controller Manager** | Surveille et maintient l’état désiré    |
-| **etcd**               | Base de données du cluster              |
-| **Kubelet**            | Exécute et surveille les Pods           |
-| **kube-proxy**         | Gère la communication réseau            |
-| **Docker/containerd**  | Exécute les conteneurs                  |
-| **Pod**                | Unité de base d’exécution               |
-| **kubectl**            | Interface CLI pour interagir avec l’API |
+| **Élément**                      | **Rôle**                                                     |
+| -------------------------------- | ------------------------------------------------------------ |
+| **API Server**                   | Point central de communication                               |
+| **Scheduler**                    | Décide où placer les pods selon ressources et politiques.    |
+| **Controller Manager**           | Surveille et maintient l’état désiré, orchestre controllers (DeploymentController, ReplicaSet, ...) |
+| **etcd**                         | Base de données clé/valeur distribuée (source de vérité du cluster) |
+| **Kubelet**                      | Agent sur chaque node qui exécute pods et rapporte l'état.   |
+| **kube-proxy**                   | Assure la connectivité réseau et load-balancing au niveau Node. |
+| **Docker/containerd**            | Exécute les conteneurs                                       |
+| **Pod**                          | Unité de base d’exécution                                    |
+| **kubectl**                      | Interface CLI pour interagir avec l’API                      |
+| **Service (NodePort/ClusterIP)** | Abstraction réseau pour accéder aux pods.                    |
+
+
 
 ### **Exemple : déploiement d’une app Flask avec** **kubectl apply**
 
@@ -145,59 +112,60 @@ Le schéma montre aussi une connexion avec Internet. Les Pods ne sont **pas dire
 kubectl apply -f flask-deployment.yaml
 ```
 
+
+
 #### **2. Communication entre les composants :**
 
 Voici ce qui se passe étape par étape :
 
-1. **kubectl (CLI)** envoie notre requête au **Kubernetes API Server** (dans le **Master Node**).
-   → C’est une requête HTTP REST vers https://<master-ip>:6443.
+### **Flux complet:**
 
-2. **API Server** vérifie son identité via **Authentication & Authorization**
+![Flux complet de communication](./Images/flow.png)
 
-   → Il s’assure qu'on a le droit de créer un *Deployment*.
+EXPLICATION:
+---------------------
 
-3. Une fois validée, la ressource (*Deployment*) est enregistrée dans la **Distributed Storage** (souvent *etcd*).
-    → etcd conserve l’état désiré du cluster : “je veux 2 pods Flask”.
+**kubectl (CLI)  -->  API Server**
+**(1)** kubectl envoie une requête HTTP REST au Kubernetes API Server
+    (ex: https://<master-ip>:6443) pour créer/modifier une ressource.
 
-4. Le **Scheduler** est notifié qu’un nouveau pod doit être créé.
-    → Il choisit un **Worker Node** où exécuter ce pod (selon la charge, la mémoire, etc.).
+**API Server -> AuthN/AuthZ**
+**(2)** L'API Server vérifie l'identité et permissions (Authentication & Authorization)
+    (s'assure que l'utilisateur a le droit de créer le Deployment).
 
-5. Le **Controller Manager** surveille la différence entre :
+**API Server -> etcd (Distributed Storage)**
+**(3)** Ressource validée : l'état désiré est persisté dans etcd
+    (ex: "je veux 2 pods flask"; etcd stocke l'état désiré du cluster).
 
-   - l’état désiré (2 pods)
-   - et l’état actuel (0 pod)
-      → Il demande au **Kubelet** du nœud choisi de lancer les conteneurs.
+**Scheduler (notification)**
+**(4)** Le Scheduler remarque la nouvelle ressource/pod à placer
+    (choisit un Worker Node selon ressources, affinités, taints/tolerations).
 
-6. Sur le **Node** :
+**Controller Manager**
+**(5)** Controller Manager compare état désiré vs état actuel
+    (si mismatch, il ordonne au Kubelet du node choisi de créer le pod).
 
-   - **Kubelet** reçoit l’instruction du **Master Node**.
-   - Il demande à **Docker** (ou un autre moteur de conteneur) de **tirer l’image** (flask-hello:1.0) et de **démarrer le conteneur**.
-   - Le **Pod** devient actif et envoie un signal de santé au **Kubelet**.
+**Sur le Worker Node**
+**(6) et (7)** Kubelet reçoit l'instruction et demande au Container Runtime (Docker/CRI) :
 
-7. Le **Kube Proxy** sur le même Node s’assure que les autres pods et services peuvent **communiquer** entre eux.
-    → Par exemple, un autre pod peut accéder à l'app Flask via le service exposé sur le port 31181.
+tirer l'image (flask-hello:1.0)
+démarrer le conteneur (créer le Pod)
+    (6b) Le Pod démarre et effectue son probe d'état (Readiness/Liveness).
+    (6c) Kubelet signale l'état au Master (via API Server).
 
-### **Le flux :**
-
-kubectl → API Server → Authentication → etcd
-
-   ↓
-
-Scheduler → choisit un Node
-
-   ↓
-
-Controller Manager → informe Kubelet
-
-   ↓
-
-Kubelet → demande à Docker de lancer le conteneur
-
-   ↓
-
-Kube Proxy → gère la communication réseau entre les pods
+**Kube-Proxy et réseau**
+**(8)** Kube-Proxy configure les règles réseau (iptables/ipvs) et le service
+    (permet la découverte et la communication : autre pod <-> service NodePort:31181).
 
 
+
+### **Ce qu’il faut retenir :**
+
+- L’**API Server** est le **point central** : tout passe par lui.
+- **etcd** ne parle **directement à personne** sauf à l’API Server.
+- Le **Scheduler** et le **Controller Manager** observent l’état dans **etcd** via l’API Server (mécanisme *watch*).
+- Le **Kubelet** ne crée rien seul : il agit **uniquement sur ordre du Master**.
+  
 
 ### Modèle de virtualisation et isolation des conteneurs
 
@@ -209,7 +177,15 @@ Kube Proxy → gère la communication réseau entre les pods
 
 ### Description de l’application Flask
 
-### Environnement utilisé (Minikube, Docker, kubectl)
+C'est une application très simple qui affiche **"Hello World from Kubernetes!"** à l'écran.
+
+
+
+### Environnement utilisé 
+
+- **Minikube** : pour déployer un **cluster k8s local** pour les tests,
+- **Docker** : utilisé comme **moteur de conteneurisation** (*container runtime*) pour exécuter les Pods.
+- **kubectl** : **interface en ligne de commande (CLI)** servant à interagir avec le **k8s API Server** (création, inspection, gestion des ressources).
 
 
 
@@ -250,16 +226,201 @@ make tree
 └── run_system.sh
 ```
 
+
+
 ### Étapes de déploiement automatisé
 
-- Build de l’image
-- Création du cluster Minikube
-- Déploiement des ressources
-- Accès via service NodePort
+Il y a le script [install_kubernetes_env.sh](./install_kubernetes_env.sh) qui automatise l'installation de Docker, kubectl et Minikube s'ils ne sont pas encore installés.
 
-### Vérification et tests du déploiement
+**Pour l'utiliser :**
+
+```bash
+make install-k8s_env
+```
+
+**Note** : Le script ne réinstallera jamais un composant déjà présent. Il affichera simplement sa version et passera au suivant.
+
+
+
+**Déployer sur Kubernetes** dans l'un des deux modes possibles : 
+
+1. **Développement** : lancer automatiquement le script [run_system.sh](./run_system.sh) en mode dev
+
+   ```bash
+   make auto-deploy-dev
+   ```
+
+2. **Production **: lancer automatiquement le script [run_system.sh](./run_system.sh) en mode prod
+
+   ```bash
+   make auto-deploy-prod
+   ```
 
 ------
+
+#### Sortie attendue pour make auto-deploy-prod :
+
+```basic
+amolitho@amolitho:~/InsideKubernetes$ make auto-deploy-prod 
+chmod +x run_system.sh
+./run_system.sh --prod
+==========================================
+Déploiement en environnement: PROD
+==========================================
+
+[1/6] Vérification de Minikube...
+Démarrage de Minikube...
+😄  minikube v1.37.0 sur Ubuntu 24.04
+✨  Utilisation du pilote virtualbox basé sur le profil existant
+👍  Démarrage du nœud "minikube" primary control-plane dans le cluster "minikube"
+🔄  Redémarrage du virtualbox VM existant pour "minikube" ...
+🐳  Préparation de Kubernetes v1.34.0 sur Docker 28.4.0...
+🔗  Configuration de bridge CNI (Container Networking Interface)...
+🔎  Vérification des composants Kubernetes...
+    ▪ Utilisation de l'image gcr.io/k8s-minikube/storage-provisioner:v5
+🌟  Modules activés: default-storageclass, storage-provisioner
+
+❗  /usr/bin/kubectl est la version 1.30.14, qui peut comporter des incompatibilités avec Kubernetes 1.34.0.
+    ▪ Vous voulez kubectl v1.34.0 ? Essayez 'minikube kubectl -- get pods -A'
+🏄  Terminé ! kubectl est maintenant configuré pour utiliser "minikube" cluster et espace de noms "default" par défaut.
+✓ Minikube démarré
+
+[2/6] Configuration de Docker pour Minikube...
+✓ Docker pointe sur: minikube
+
+[3/6] Build de l'image Docker...
+✓ Image flask-hello:1.0 existe déjà, skip du build
+✓ Image flask-hello:1.0 disponible
+
+[4/6] Nettoyage des anciennes ressources...
+Aucune ressource à supprimer
+
+[5/6] Déploiement Kubernetes (prod)...
+configmap/flask-config created
+secret/flask-secret created
+service/flask-service created
+deployment.apps/flask-deployment created
+Attente du démarrage des pods...
+pod/flask-deployment-6dbf944f88-58xwl condition met
+pod/flask-deployment-6dbf944f88-clslf condition met
+pod/flask-deployment-6dbf944f88-f4sfs condition met
+⚠ Timeout ou pods pas encore prêts, vérifiez avec 'kubectl get pods'
+
+[6/6] État du déploiement:
+==========================
+NAME                                READY   STATUS    RESTARTS   AGE
+flask-deployment-6dbf944f88-58xwl   1/1     Running   0          60s
+flask-deployment-6dbf944f88-clslf   1/1     Running   0          60s
+flask-deployment-6dbf944f88-f4sfs   1/1     Running   0          60s
+
+NAME            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+flask-service   NodePort    10.102.5.179   <none>        5600:31181/TCP   61s
+
+==========================================
+✓ Application déployée avec succès!
+==========================================
+
+URL d'accès:
+http://192.168.59.101:31181
+
+Commandes utiles:
+  minikube service flask-service      # Ouvrir dans le navigateur
+  kubectl logs -l app=flask-app       # Voir les logs
+  kubectl get all                     # Voir toutes les ressources
+  make delete-prod                  # Nettoyer
+==========================================
+```
+
+
+
+**Voir toutes les ressources : *kubectl get all***
+
+**Sortie attendue:** 
+
+```basic
+amolitho@amolitho:~/InsideKubernetes$ kubectl get all
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/flask-deployment-6dbf944f88-58xwl   1/1     Running   0          5m2s
+pod/flask-deployment-6dbf944f88-clslf   1/1     Running   0          5m2s
+pod/flask-deployment-6dbf944f88-f4sfs   1/1     Running   0          5m2s
+
+NAME                    TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+service/flask-service   NodePort    10.102.5.179   <none>        5600:31181/TCP   5m3s
+service/kubernetes      ClusterIP   10.96.0.1      <none>        443/TCP          5d1h
+
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/flask-deployment   3/3     3            3           5m3s
+
+NAME                                          DESIRED   CURRENT   READY   AGE
+replicaset.apps/flask-deployment-6dbf944f88   3         3         3       5m3s
+```
+
+**Tenter de supprimer tout d'un coup**
+```bash
+kubectl delete all -l app=flask-app
+```
+
+**Sortie attendue:** 
+
+```basic
+amolitho@amolitho:~/InsideKubernetes$ kubectl delete all -l app=flask-app
+pod "flask-deployment-6dbf944f88-58xwl" deleted
+pod "flask-deployment-6dbf944f88-clslf" deleted
+pod "flask-deployment-6dbf944f88-f4sfs" deleted
+replicaset.apps "flask-deployment-6dbf944f88" deleted
+```
+**Vérifie toutes les ressources à nouveau : *kubectl get all***
+
+**Sortie attendue:** 
+
+```basic
+amolitho@amolitho:~/InsideKubernetes$ kubectl get all
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/flask-deployment-6dbf944f88-4zsfs   1/1     Running   0          3m4s
+pod/flask-deployment-6dbf944f88-72spq   1/1     Running   0          3m4s
+pod/flask-deployment-6dbf944f88-scpwn   1/1     Running   0          3m4s
+
+NAME                    TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+service/flask-service   NodePort    10.102.5.179   <none>        5600:31181/TCP   13m
+service/kubernetes      ClusterIP   10.96.0.1      <none>        443/TCP          5d1h
+
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/flask-deployment   3/3     3            3           13m
+
+NAME                                          DESIRED   CURRENT   READY   AGE
+replicaset.apps/flask-deployment-6dbf944f88   3         3         3       3m4s
+```
+Le résultat montre quelque chose d’important : Le Deployment flask-deployment n’a pas été supprimé, donc Kubernetes a automatiquement recréé trois nouveaux pods pour le remplacer.
+
+En clair : On a supprimé les pods et le replica set, mais pas le Deployment, du coup, Kubernetes a détecté qu’il “manquait” des pods et les a recréés selon la définition du déploiement.
+
+C’est le comportement normal et voulu d’un Deployment : il garantit qu’un nombre fixe de pods tourne en permanence.
+
+Si on veut tout supprimer réellement, exécute :
+```bash
+kubectl delete deployment flask-deployment
+kubectl delete service flask-service
+```
+
+Ensuite vérifie :
+```bash
+kubectl get all
+```
+On ne verra alors plus ni pods, ni deployment, ni service liés à ton app Flask.
+```basic
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   5d1h
+```
+On n’a plus que le service “kubernetes”, qui est généré automatiquement par le système pour permettre la communication interne entre les composants du cluster, c’est normal et on ne dois pas le supprimer.
+
+Tout le reste (pods, services, déploiements Flask) a bien été supprimé.
+
+L'environnement est donc prêt à :
+
+être redéployé proprement (make auto-deploy-prod ou make auto-deploy-dev selon le besoin), ou être arrêté proprement via :
+```bash
+minikube stop
+```
 
 
 
